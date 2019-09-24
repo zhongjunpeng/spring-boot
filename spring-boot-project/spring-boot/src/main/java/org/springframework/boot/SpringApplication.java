@@ -194,6 +194,7 @@ public class SpringApplication {
 
 	private static final Log logger = LogFactory.getLog(SpringApplication.class);
 
+	//主要的Java config类集合
 	private Set<Class<?>> primarySources;
 
 	private Set<String> sources = new LinkedHashSet<>();
@@ -210,6 +211,7 @@ public class SpringApplication {
 
 	private Banner banner;
 
+	//资源加载器
 	private ResourceLoader resourceLoader;
 
 	private BeanNameGenerator beanNameGenerator;
@@ -267,12 +269,14 @@ public class SpringApplication {
 		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
 		this.webApplicationType = WebApplicationType.deduceFromClasspath();
 		setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
+		//初始化 classpath 下的所有的可用的 ApplicationListener。
 		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
 		this.mainApplicationClass = deduceMainApplicationClass();
 	}
 
 	private Class<?> deduceMainApplicationClass() {
 		try {
+			//根据调用栈，推断出 main 方法的类名,加载类的时候会把生成方法的栈帧压入栈
 			StackTraceElement[] stackTrace = new RuntimeException().getStackTrace();
 			for (StackTraceElement stackTraceElement : stackTrace) {
 				if ("main".equals(stackTraceElement.getMethodName())) {
@@ -293,11 +297,14 @@ public class SpringApplication {
 	 * @return a running {@link ApplicationContext}
 	 */
 	public ConfigurableApplicationContext run(String... args) {
+		//StopWatch 是来自 org.springframework.util 的工具类，可以用来方便的记录程序的运行时间。
 		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
 		ConfigurableApplicationContext context = null;
 		Collection<SpringBootExceptionReporter> exceptionReporters = new ArrayList<>();
+		//配置 headless 属性
 		configureHeadlessProperty();
+		// 获得 SpringApplicationRunListener 的数组，并启动监听
 		SpringApplicationRunListeners listeners = getRunListeners(args);
 		listeners.starting();
 		try {
@@ -406,6 +413,7 @@ public class SpringApplication {
 
 	private SpringApplicationRunListeners getRunListeners(String[] args) {
 		Class<?>[] types = new Class<?>[] { SpringApplication.class, String[].class };
+		//利用 SpringFactoriesLoader 加载 META-INF/spring.factories 中 key 为 SpringApplicationRunListener 的值，然后再将获取到的值作为参数传递到 SpringApplicationRunListeners 的构造方法中去创建对象。
 		return new SpringApplicationRunListeners(logger,
 				getSpringFactoriesInstances(SpringApplicationRunListener.class, types, this, args));
 	}
@@ -414,9 +422,13 @@ public class SpringApplication {
 		return getSpringFactoriesInstances(type, new Class<?>[] {});
 	}
 
+	//初始化 classpath 下的所有的可用的 ApplicationContextInitializer。
+	//getSpringFactoriesInstances在第一次被调用时会将类路径下所有的META-INF/spring.factories的文件中的属性进行加载并缓存到SpringFactoriesLoader的缓存cache中，下次被调用的时候就直接从SpringFactoriesLoader的cache中取数据了。
 	private <T> Collection<T> getSpringFactoriesInstances(Class<T> type, Class<?>[] parameterTypes, Object... args) {
+		//获取类加载器
 		ClassLoader classLoader = getClassLoader();
 		// Use names and ensure unique to protect against duplicates
+		//是从 META-INF/spring.factories 的资源文件中，读取 key 为org.springframework.context.ApplicationContextInitializer 的 value。
 		Set<String> names = new LinkedHashSet<>(SpringFactoriesLoader.loadFactoryNames(type, classLoader));
 		List<T> instances = createSpringFactoriesInstances(type, parameterTypes, classLoader, args, names);
 		AnnotationAwareOrderComparator.sort(instances);
@@ -1212,6 +1224,7 @@ public class SpringApplication {
 	 * @return the running {@link ApplicationContext}
 	 */
 	public static ConfigurableApplicationContext run(Class<?>[] primarySources, String[] args) {
+		//创建SpringApplication对象并执行
 		return new SpringApplication(primarySources).run(args);
 	}
 
